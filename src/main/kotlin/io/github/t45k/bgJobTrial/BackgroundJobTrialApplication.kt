@@ -15,8 +15,12 @@ class BackgroundJobTrialApplication(private val databaseClient: DatabaseClient) 
         databaseClient.sql(
             """
                 create table job(
-                    serialized_job text not null,
-                    status enum('TODO', 'IN_PROGRESS', 'COMPLETED', 'FAILED') not null
+                    id bigint auto_increment not null primary key,
+                    class_fqn varchar(256) not null,
+                    method_name varchar(256) not null,
+                    args text not null,
+                    status enum('TODO', 'IN_PROGRESS', 'COMPLETED', 'FAILED') not null,
+                    created_at datetime not null default current_timestamp
                 )
             """.trimIndent()
         ).then().block()

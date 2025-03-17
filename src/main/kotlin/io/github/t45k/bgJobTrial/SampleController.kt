@@ -1,34 +1,49 @@
 package io.github.t45k.bgJobTrial
 
-import org.springframework.stereotype.Component
+import kotlinx.coroutines.delay
 import org.springframework.stereotype.Service
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.concurrent.atomic.AtomicLong
 
 @RestController
-class SampleController(private val sampleUseCase: SampleUseCase) {
-    @GetMapping("/sample")
-    suspend fun sample(): String {
-        sampleUseCase.call()
+class SampleController(
+    private val runBackground: RunBackground,
+    private val sampleService: SampleService,
+) {
+    private val counter = AtomicLong()
+
+    @GetMapping("/complete")
+    suspend fun complete(): String {
+        runBackground(sampleService::complete, SampleId(counter.incrementAndGet()))
         return "DONE"
     }
-}
 
-@Component
-class SampleUseCase(
-    private val sampleService: SampleService,
-    private val runBackground: RunBackground,
-) {
-    suspend fun call() {
-        runBackground(sampleService::call, SampleId(1))
+    @GetMapping("/interrupted")
+    suspend fun interrupted(): String {
+        runBackground(sampleService::interrupted)
+        return "DONE"
+    }
+
+    @GetMapping("/exception")
+    suspend fun exception(): String {
+        runBackground(sampleService::exception)
+        return "DONE"
     }
 }
 
 @Service
 class SampleService {
-    suspend fun call(id: SampleId) {
+    suspend fun complete(id: SampleId) {
+    }
+
+    suspend fun interrupted() {
+        delay(Long.MAX_VALUE)
+    }
+
+    suspend fun exception() {
+        throw RuntimeException("test")
     }
 }
 
-@JvmInline
-value class SampleId(val value: Long)
+data class SampleId(val value: Long)

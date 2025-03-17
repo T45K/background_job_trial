@@ -18,30 +18,22 @@ class RunBackgroundImpl(private val databaseClient: DatabaseClient) : RunBackgro
     private val objectMapper = jacksonObjectMapper()
 
     override suspend operator fun invoke(function: KSuspendFunction0<Unit>) {
-        val serializedJob = objectMapper.writeValueAsString(
-            Job(
-                function.javaMethod!!.declaringClass.canonicalName,
-                function.name,
-                emptyList()
-            )
-        )
-        databaseClient.sql("insert into job(serialized_job, status) values (?, ?)")
-            .bind(0, serializedJob)
-            .bind(1, JobStatus.TODO)
+        val serializedArgs = objectMapper.writeValueAsString(emptyList<Nothing>())
+        databaseClient.sql("insert into job(class_fqn, method_name, args, status) values (?, ?, ?, ?)")
+            .bind(0, function.javaMethod!!.declaringClass.canonicalName)
+            .bind(1, function.name)
+            .bind(2, serializedArgs)
+            .bind(3, JobStatus.TODO)
             .await()
     }
 
     override suspend operator fun <T1> invoke(function: KSuspendFunction1<T1, Unit>, arg: T1) {
-        val serializedJob = objectMapper.writeValueAsString(
-            Job(
-                function.javaMethod!!.declaringClass.canonicalName,
-                function.name,
-                listOf(arg)
-            )
-        )
-        databaseClient.sql("insert into job(serialized_job, status) values (?, ?)")
-            .bind(0, serializedJob)
-            .bind(1, JobStatus.TODO)
+        val serializedArgs = objectMapper.writeValueAsString(listOf(arg))
+        databaseClient.sql("insert into job(class_fqn, method_name, args, status) values (?, ?, ?, ?)")
+            .bind(0, function.javaMethod!!.declaringClass.canonicalName)
+            .bind(1, function.name)
+            .bind(2, serializedArgs)
+            .bind(3, JobStatus.TODO)
             .await()
     }
 }
