@@ -3,7 +3,9 @@ package io.github.t45k.bgJobTrial
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.reactive.awaitFirstOrNull
+import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationContext
 import org.springframework.r2dbc.core.DatabaseClient
@@ -49,6 +51,8 @@ class JobPolling(
             )
         } ?: return
 
+        logger.info("Start $job") // debug
+
         val clazz = Class.forName(job.classFqn)
         val instance = applicationContext.getBean(clazz)
 
@@ -71,28 +75,28 @@ class JobPolling(
             logger.info("Completed $job") // debug
         } catch (e: Exception) {
             when (e) {
-                is CancellationException -> {
+                is CancellationException -> withContext(NonCancellable) {
+                    logger.info("Interrupted $job") // debug
                     databaseClient.sql("update job set status = ? where id = ?")
                         .bind(0, JobStatus.TODO)
                         .bind(1, internalJobId)
                         .await()
-                    logger.info("Interrupted $job") // debug
                 }
 
                 is InvocationTargetException -> {
+                    logger.error("Failed to execute $job during execution", e.cause)
                     databaseClient.sql("update job set status = ? where id = ?")
                         .bind(0, JobStatus.FAILED)
                         .bind(1, internalJobId)
                         .await()
-                    logger.error("Failed to execute $job during execution", e.cause)
                 }
 
                 else -> {
+                    logger.error("Failed to execute $job outer execution", e)
                     databaseClient.sql("update job set status = ? where id = ?")
                         .bind(0, JobStatus.FAILED)
                         .bind(1, internalJobId)
                         .await()
-                    logger.error("Failed to execute $job outer execution", e)
                 }
             }
         }

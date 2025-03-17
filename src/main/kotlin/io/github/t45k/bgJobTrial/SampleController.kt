@@ -38,7 +38,7 @@ class SampleService {
     }
 
     suspend fun interrupted() {
-        delay(Long.MAX_VALUE)
+        delay(Long.MAX_VALUE - 1)
     }
 
     suspend fun exception() {
