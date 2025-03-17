@@ -15,19 +15,19 @@ class SampleController(
 
     @GetMapping("/complete")
     suspend fun complete(): String {
-        runBackground(sampleService::complete, SampleId(counter.incrementAndGet()), SampleValue(counter.incrementAndGet().toString()))
+        runBackground(JobType.COMPLETE, sampleService::complete, SampleId(counter.incrementAndGet()), SampleValue(counter.incrementAndGet().toString()))
         return "DONE"
     }
 
     @GetMapping("/interrupted")
     suspend fun interrupted(): String {
-        runBackground(sampleService::interrupted)
+        runBackground(JobType.INTERRUPTED, sampleService::interrupted)
         return "DONE"
     }
 
     @GetMapping("/exception")
     suspend fun exception(): String {
-        runBackground(sampleService::exception)
+        runBackground(JobType.EXCEPTION, sampleService::exception)
         return "DONE"
     }
 }
@@ -35,6 +35,7 @@ class SampleController(
 @Service
 class SampleService {
     suspend fun complete(id: SampleId, value: SampleValue) {
+        delay(3_000)
     }
 
     suspend fun interrupted() {

@@ -32,7 +32,18 @@ class JobPolling(
     @Scheduled(fixedRate = 1, timeUnit = TimeUnit.SECONDS)
     suspend fun pollAndExecute() {
         val (internalJobId, job) = transactionalOperator.executeAndAwait {
-            val jobRecord = databaseClient.sql("select * from job where status = ? order by id desc limit 1 for update")
+            val jobRecord = databaseClient.sql(
+//                "select * from job where status = ? order by id desc limit 1 for update"
+                """
+                    select * from job
+                    where status = ?
+                      and serialization_key not in (
+                        select distinct serialization_key from job where status = 'IN_PROGRESS'
+                      )
+                    order by id
+                    limit 1
+                """.trimIndent()
+            )
                 .bind(0, JobStatus.TODO)
                 .fetch()
                 .one()
@@ -59,7 +70,7 @@ class JobPolling(
         try {
             transactionalOperator.executeAndAwait {
                 val function = clazz.kotlin.declaredFunctions.first { it.name == job.methodName }
-                val paramClasses = function.parameters.drop(1) // remove object itself
+                val paramClasses = function.parameters.drop(1) // remove receiver object itself
                     .map { it.type.classifier!! as KClass<*> }
 
                 val deserializedArgs = paramClasses.zip(job.serializedArgs).map { (paramClass, arg) ->
