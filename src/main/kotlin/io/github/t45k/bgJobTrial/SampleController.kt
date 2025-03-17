@@ -15,7 +15,7 @@ class SampleController(
 
     @GetMapping("/complete")
     suspend fun complete(): String {
-        runBackground(sampleService::complete, SampleId(counter.incrementAndGet()))
+        runBackground(sampleService::complete, SampleId(counter.incrementAndGet()), SampleValue(counter.incrementAndGet().toString()))
         return "DONE"
     }
 
@@ -34,7 +34,7 @@ class SampleController(
 
 @Service
 class SampleService {
-    suspend fun complete(id: SampleId) {
+    suspend fun complete(id: SampleId, value: SampleValue) {
     }
 
     suspend fun interrupted() {
@@ -47,3 +47,6 @@ class SampleService {
 }
 
 data class SampleId(val value: Long)
+
+@JvmInline
+value class SampleValue(val value: String)
