@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: bgJobTrial
+  r2dbc:
+    url: r2dbc:mysql://localhost:13306/test?useSSL=false
+    username: root
+    password: password

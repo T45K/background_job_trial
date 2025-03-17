@@ -4,7 +4,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.CancellationException
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import java.io.Serializable
+import org.springframework.stereotype.Service
 import java.util.concurrent.TimeUnit
 
 @Component
@@ -15,13 +15,6 @@ class JobPolling(
 
     @Scheduled(fixedRate = 1, timeUnit = TimeUnit.SECONDS)
     suspend fun pollAndExecute() {
-        val r = object : Runnable, Serializable {
-            override fun run() {
-                println("hoge")
-            }
-        }
-        println(objectMapper.writeValueAsString(r))
-
         transactionalOperator.execute {
             // select job record for update.
             // update job record status to IN_PROGRESS.
@@ -54,3 +47,12 @@ class JobPolling(
 fun interface TransactionalOperator {
     fun execute(suspend: () -> Unit)
 }
+
+@Service
+class XXXService {
+    suspend fun exec(id: XXXId) {
+    }
+}
+
+@JvmInline
+value class XXXId(val value: Long)
