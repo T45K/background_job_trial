@@ -4,10 +4,12 @@ import jakarta.annotation.PostConstruct
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.r2dbc.core.DatabaseClient
+import org.springframework.scheduling.annotation.EnableAsync
 import org.springframework.scheduling.annotation.EnableScheduling
 
 @SpringBootApplication
 @EnableScheduling
+@EnableAsync
 class BackgroundJobTrialApplication(private val databaseClient: DatabaseClient) {
     @PostConstruct
     fun initTable() {

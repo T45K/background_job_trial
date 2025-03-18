@@ -2,6 +2,9 @@ package io.github.t45k.bgJobTrial
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kotlin.reflect.KClass
+import kotlin.reflect.full.callSuspend
+import kotlin.reflect.full.declaredFunctions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.reactive.awaitFirstOrNull
@@ -16,9 +19,6 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import org.springframework.transaction.reactive.executeAndAwait
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.TimeUnit
-import kotlin.reflect.KClass
-import kotlin.reflect.full.callSuspend
-import kotlin.reflect.full.declaredFunctions
 
 @Component
 class JobPolling(
@@ -33,7 +33,6 @@ class JobPolling(
     suspend fun pollAndExecute() {
         val (internalJobId, job) = transactionalOperator.executeAndAwait {
             val jobRecord = databaseClient.sql(
-//                "select * from job where status = ? order by id desc limit 1 for update"
                 """
                     select * from job
                     where status = ?
@@ -66,16 +65,16 @@ class JobPolling(
 
         val clazz = Class.forName(job.classFqn)
         val instance = applicationContext.getBean(clazz)
+        val function = clazz.kotlin.declaredFunctions.first { it.name == job.methodName }
+        val paramClasses = function.parameters.drop(1) // remove receiver object itself
+            .map { it.type.classifier!! as KClass<*> }
+
+        val deserializedArgs = paramClasses.zip(job.serializedArgs).map { (paramClass, arg) ->
+            arg?.let { objectMapper.treeToValue(it, paramClass.java) }
+        }
 
         try {
             transactionalOperator.executeAndAwait {
-                val function = clazz.kotlin.declaredFunctions.first { it.name == job.methodName }
-                val paramClasses = function.parameters.drop(1) // remove receiver object itself
-                    .map { it.type.classifier!! as KClass<*> }
-
-                val deserializedArgs = paramClasses.zip(job.serializedArgs).map { (paramClass, arg) ->
-                    arg?.let { objectMapper.treeToValue(it, paramClass.java) }
-                }
                 function.callSuspend(instance, *deserializedArgs.toTypedArray())
 
                 databaseClient.sql("update job set status = ? where id = ?")
